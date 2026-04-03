@@ -110,7 +110,7 @@ def sleep_until_reset(headers: dict[str, str]) -> None:
         wake = datetime.fromtimestamp(reset, tz=timezone.utc) + timedelta(seconds=2)
         wait = max(0.0, (wake - datetime.now(timezone.utc)).total_seconds())
         if wait > 0:
-            print(f"Лимит запросов, жду {wait:.0f} с…", file=sys.stderr)
+            print(f"Лимит запросов, жду {wait:.0f} с...", file=sys.stderr)
             time.sleep(wait)
 
 
@@ -226,7 +226,18 @@ class MonthStats:
     shas: set[tuple[str, str]] = field(default_factory=set)
 
 
+def _utf8_stdio_windows() -> None:
+    if sys.platform != "win32":
+        return
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError, OSError, ValueError):
+            pass
+
+
 def main() -> int:
+    _utf8_stdio_windows()
     parser = argparse.ArgumentParser(
         description="Большая статистика по GitHub за месяц (коммиты, строки, файлы, пуши).",
     )
@@ -301,7 +312,7 @@ def main() -> int:
         for repo, sha in sorted(stats.shas):
             done += 1
             if done % 50 == 1 or done == total:
-                print(f"Коммиты: детали {done}/{total}…", file=sys.stderr)
+                print(f"Коммиты: детали {done}/{total}...", file=sys.stderr)
             try:
                 detail = fetch_commit_detail(repo, sha, token)
             except RuntimeError as e:
@@ -332,7 +343,7 @@ def main() -> int:
     print(f"  Строк удалено:    {stats.deletions:,}")
     print(f"  Сумма изменений:  {total_delta:,}")
     if ratio is not None:
-        print(f"  Отношение +/−:    {ratio:.2f}")
+        print(f"  Отношение +/-:    {ratio:.2f}")
     print(f"  Репозиториев с коммитами в периоде: {len(stats.repos)}")
 
     print()
@@ -356,11 +367,11 @@ def main() -> int:
 
     print()
     print("=== Примечания ===")
-    print("  • Поиск коммитов в основном по дефолтной ветке; форки могут быть неполными.")
-    print("  • Потолок выдачи поиска ~1000 коммитов за запрос.")
-    print("  • Пуши считаются только по последним публичным событиям профиля.")
+    print("  - Поиск коммитов в основном по дефолтной ветке; форки могут быть неполными.")
+    print("  - Потолок выдачи поиска ~1000 коммитов за запрос.")
+    print("  - Пуши считаются только по последним публичным событиям профиля.")
     if not token:
-        print("  • С токеном выше лимиты и видны приватные репозитории, доступные токену.")
+        print("  - С токеном выше лимиты и видны приватные репозитории, доступные токену.")
 
     return 0
 
